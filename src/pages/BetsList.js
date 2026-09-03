@@ -27,7 +27,7 @@ export default function BetsList({ refreshKey, tipsters=[], onEdit, onRefresh, t
     if (sport !=='all') params.sport=sport;
     if (type  !=='all') params.type=type;
     if (tipster!=='all') params.tipster_id=tipster;
-    getBets(params).then(d=>{setBets(d);setLoading(false);});
+    getBets(params).then(d=>{setBets(d);setLoading(false);}).catch(e=>{console.error(e);setLoading(false);});
   }, [status,sport,type,tipster]);
 
   useEffect(()=>{ load(); }, [load,refreshKey]);

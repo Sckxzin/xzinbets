@@ -20,7 +20,7 @@ const NAV_ITEMS = [
 ];
 
 function AppInner() {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, setUser } = useAuth();
   const [page, setPage]          = useState('dashboard');
   const [modal, setModal]        = useState(false);
   const [editBet, setEditBet]    = useState(null);
@@ -30,7 +30,7 @@ function AppInner() {
 
   const refresh = useCallback(() => setRefresh(k => k + 1), []);
 
-  useEffect(() => { if (user) getTipsters().then(setTipsters); }, [user, refreshKey]);
+  useEffect(() => { if (user) getTipsters().then(setTipsters).catch(console.error); }, [user, refreshKey]);
 
   if (loading) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#000' }}>
@@ -95,7 +95,7 @@ function AppInner() {
             style={{ width:'100%', justifyContent:'center', marginBottom:8 }}>
             + NOVA APOSTA
           </button>
-          <button className="btn btn-ghost" onClick={() => signOut()}
+          <button className="btn btn-ghost" onClick={() => signOut().finally(() => setUser(null))}
             style={{ width:'100%', justifyContent:'center', fontSize:10, opacity:.5 }}>
             Sair
           </button>

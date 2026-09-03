@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { signIn } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
+  const { setUser } = useAuth();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [error,    setError]    = useState('');
@@ -10,12 +12,12 @@ export default function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
-    const { error } = await signIn(email, password);
-    if (error) setError(
-      error.message === 'Invalid login credentials'
-        ? 'Email ou senha incorretos.'
-        : error.message
-    );
+    try {
+      const user = await signIn(email, password);
+      setUser(user);
+    } catch (err) {
+      setError(err.message);
+    }
     setLoading(false);
   };
 

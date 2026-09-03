@@ -8,7 +8,7 @@ import { SPORT_MAP } from '../utils/constants';
 
 export default function Analysis({ refreshKey }) {
   const [stats, setStats] = useState(null);
-  useEffect(()=>{ getStats().then(setStats); }, [refreshKey]);
+  useEffect(()=>{ getStats().then(setStats).catch(console.error); }, [refreshKey]);
   if (!stats) return <div style={{padding:40,textAlign:'center',color:'var(--text3)'}}>Carregando…</div>;
 
   const sportRows = Object.entries(stats.sportStats||{}).map(([name,s])=>({

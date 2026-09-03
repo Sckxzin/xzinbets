@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getAdminStats } from '../utils/api';
-import { supabase } from '../utils/supabase';
+import { getAdminStats, createUser } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminPage() {
@@ -8,25 +7,28 @@ export default function AdminPage() {
   const [data,     setData]     = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [invEmail, setInvEmail] = useState('');
+  const [invPass,  setInvPass]  = useState('');
   const [invMsg,   setInvMsg]   = useState('');
   const [invBusy,  setInvBusy]  = useState(false);
 
   const load = () => {
     setLoading(true);
-    getAdminStats().then(d=>{ setData(d); setLoading(false); });
+    getAdminStats().then(d=>{ setData(d); setLoading(false); }).catch(e=>{console.error(e);setLoading(false);});
   };
   useEffect(load, []);
 
   const sendInvite = async () => {
-    if (!invEmail) return;
+    if (!invEmail || !invPass) return;
     setInvBusy(true); setInvMsg('');
-    const { error } = await supabase.auth.signInWithOtp({
-      email: invEmail,
-      options: { shouldCreateUser: true, emailRedirectTo: window.location.origin },
-    });
-    if (error) setInvMsg(`❌ Erro: ${error.message}`);
-    else       setInvMsg(`✅ Convite enviado para ${invEmail}!`);
-    setInvEmail(''); setInvBusy(false);
+    try {
+      await createUser({ email: invEmail, password: invPass });
+      setInvMsg(`✅ Usuário ${invEmail} criado! Compartilhe a senha com ele por um canal seguro.`);
+      setInvEmail(''); setInvPass('');
+      load();
+    } catch (err) {
+      setInvMsg(`❌ Erro: ${err.message}`);
+    }
+    setInvBusy(false);
   };
 
   if (loading) return <div style={{padding:40,textAlign:'center',color:'var(--text3)'}}>Carregando…</div>;
@@ -51,13 +53,16 @@ export default function AdminPage() {
       </div>
 
       <div className="card">
-        <div style={{fontWeight:700,fontSize:15,marginBottom:14}}>✉️ Convidar Usuário</div>
+        <div style={{fontWeight:700,fontSize:15,marginBottom:14}}>✉️ Criar Usuário</div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
           <input style={{flex:1,minWidth:200}} type="email" placeholder="email@exemplo.com"
             value={invEmail} onChange={e=>setInvEmail(e.target.value)}
             onKeyDown={e=>e.key==='Enter'&&sendInvite()} />
-          <button className="btn btn-primary" onClick={sendInvite} disabled={invBusy||!invEmail}>
-            {invBusy?'Enviando…':'Enviar convite'}
+          <input style={{flex:1,minWidth:160}} type="text" placeholder="senha inicial (min. 8 caracteres)"
+            value={invPass} onChange={e=>setInvPass(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&sendInvite()} />
+          <button className="btn btn-primary" onClick={sendInvite} disabled={invBusy||!invEmail||!invPass}>
+            {invBusy?'Criando…':'Criar acesso'}
           </button>
         </div>
         {invMsg&&(
@@ -66,8 +71,8 @@ export default function AdminPage() {
           </div>
         )}
         <div style={{fontSize:12,color:'var(--text3)',marginTop:8}}>
-          O usuário receberá um link mágico por email para acessar o sistema.
-          Se não funcionar, convide diretamente pelo painel do Supabase → Authentication → Users → Invite User.
+          Defina uma senha inicial e compartilhe com o convidado por um canal seguro
+          (ex: WhatsApp). Não há envio automático de email neste sistema.
         </div>
       </div>
 
