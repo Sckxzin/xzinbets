@@ -11,7 +11,7 @@ export default function Settings({ toast }) {
       setBankroll(s.bankroll || '1000');
       setStreakAlert(s.streak_alert || '3');
       setGoal(s.goal || '');
-    });
+    }).catch(console.error);
   }, []);
 
   const save = async () => {
@@ -67,8 +67,8 @@ export default function Settings({ toast }) {
         </div>
         <ul style={{color:'var(--text2)',fontSize:12,lineHeight:2.2,paddingLeft:16}}>
           <li>Frontend: React + Recharts</li>
-          <li>Banco: Supabase (PostgreSQL)</li>
-          <li>Auth: Supabase Auth — acesso por convite</li>
+          <li>Banco: PostgreSQL (Railway)</li>
+          <li>Auth: própria (JWT) — acesso por convite</li>
           <li>Hospedagem: Railway</li>
         </ul>
         <div style={{marginTop:12,fontSize:11,color:'var(--text3)',fontStyle:'italic'}}>

@@ -9,7 +9,7 @@ export default function Tipsters({ refreshKey, onTipstersChange, toast }) {
   const [notes, setNotes]       = useState('');
   const [busy, setBusy]         = useState(false);
 
-  const load = () => getTipsterStats().then(d=>{ setTipsters(d); onTipstersChange?.(d); });
+  const load = () => getTipsterStats().then(d=>{ setTipsters(d); onTipstersChange?.(d); }).catch(console.error);
   useEffect(()=>{ load(); }, [refreshKey]);
 
   const openNew  = () => { setEditItem(null); setName(''); setNotes(''); setShowForm(true); };

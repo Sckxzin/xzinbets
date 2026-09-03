@@ -1,17 +1,30 @@
-const express = require('express');
-const path    = require('path');
+require('dotenv').config();
+require('express-async-errors');
+const express      = require('express');
+const cookieParser = require('cookie-parser');
+const path          = require('path');
 
 const app  = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
-// Serve os arquivos estáticos do build do React
+app.use(express.json());
+app.use(cookieParser());
+
+app.use('/api', require('./server/routes'));
+
+// Serve os arquivos estáticos do build do React (apenas quando existir,
+// ex: em produção; em dev o front roda separado via `react-scripts start`)
 app.use(express.static(path.join(__dirname, 'build')));
-
-// Qualquer rota vai para o index.html (SPA)
-app.get('*', (req, res) => {
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: 'Erro interno no servidor.' });
+});
+
 app.listen(PORT, () => {
-  console.log(`✅ BetTracker rodando na porta ${PORT}`);
+  console.log(`✅ BetTracker API rodando na porta ${PORT}`);
 });
