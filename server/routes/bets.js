@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../db');
 const { requireAuth } = require('../auth');
 const { buildStats } = require('../stats');
+const { validateBet } = require('../validate');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -48,15 +49,20 @@ router.get('/stats', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const b = req.body || {};
+  const body = req.body || {};
+  const b = { ...body, type: body.type || 'single', result: body.result || 'pending', notes: body.notes || '' };
+
+  const errors = validateBet(b);
+  if (errors.length) return res.status(400).json({ error: errors.join(' ') });
+
   const ep = b.estimated_prob || null;
   const isValue = !!(ep && parseFloat(b.odd) > 1 / ep);
 
   const { rows } = await pool.query(
     `INSERT INTO bets (user_id, type, sport, description, house, market, odd, stake, date, result, notes, tipster_id, estimated_prob, is_value)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
-    [req.user.id, b.type || 'single', b.sport, b.description, b.house, b.market, b.odd, b.stake, b.date,
-     b.result || 'pending', b.notes || '', b.tipster_id || null, ep, isValue]
+    [req.user.id, b.type, b.sport, b.description, b.house, b.market, b.odd, b.stake, b.date,
+     b.result, b.notes, b.tipster_id || null, ep, isValue]
   );
   const bet = rows[0];
 
@@ -72,7 +78,12 @@ router.post('/', async (req, res) => {
 });
 
 router.put('/:id', async (req, res) => {
-  const b = req.body || {};
+  const body = req.body || {};
+  const b = { ...body, notes: body.notes || '' };
+
+  const errors = validateBet(b);
+  if (errors.length) return res.status(400).json({ error: errors.join(' ') });
+
   const ep = b.estimated_prob !== undefined ? (b.estimated_prob || null) : null;
   const isValue = !!(ep && parseFloat(b.odd) > 1 / ep);
 

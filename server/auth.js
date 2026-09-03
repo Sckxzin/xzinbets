@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
+const crypto = require('crypto');
 
 if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET ausente. Defina uma string aleatória longa nessa variável de ambiente.');
@@ -11,6 +12,16 @@ const TOKEN_TTL = '30d';
 
 function hashPassword(password) {
   return bcrypt.hash(password, 12);
+}
+
+// Alfabeto sem caracteres ambíguos (0/O, 1/l/I) para facilitar leitura na hora
+// de repassar a senha por WhatsApp/etc.
+const PASSWORD_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+
+function generatePassword(length = 14) {
+  let out = '';
+  for (let i = 0; i < length; i++) out += PASSWORD_ALPHABET[crypto.randomInt(PASSWORD_ALPHABET.length)];
+  return out;
 }
 
 function comparePassword(password, hash) {
@@ -52,7 +63,7 @@ function requireAdmin(req, res, next) {
 }
 
 module.exports = {
-  hashPassword, comparePassword, signToken,
+  hashPassword, comparePassword, generatePassword, signToken,
   setAuthCookie, clearAuthCookie, requireAuth, requireAdmin,
   COOKIE_NAME,
 };
