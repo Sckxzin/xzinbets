@@ -1,10 +1,19 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { comparePassword, hashPassword, signToken, setAuthCookie, clearAuthCookie, requireAuth } = require('../auth');
 
 const router = express.Router();
 
-router.post('/login', async (req, res) => {
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas de login. Tente novamente em alguns minutos.' },
+});
+
+router.post('/login', loginLimiter, async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'Informe email e senha.' });
 
@@ -27,7 +36,7 @@ router.get('/me', requireAuth, (req, res) => {
   res.json(req.user);
 });
 
-router.put('/password', requireAuth, async (req, res) => {
+router.put('/password', requireAuth, loginLimiter, async (req, res) => {
   const { currentPassword, newPassword } = req.body || {};
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Informe a senha atual e a nova senha.' });
   if (newPassword.length < 8) return res.status(400).json({ error: 'A nova senha deve ter ao menos 8 caracteres.' });

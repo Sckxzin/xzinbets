@@ -6,10 +6,10 @@ export default function AdminPage({ toast }) {
   const { user } = useAuth();
   const [data,     setData]     = useState(null);
   const [loading,  setLoading]  = useState(true);
-  const [invEmail, setInvEmail] = useState('');
-  const [invPass,  setInvPass]  = useState('');
-  const [invMsg,   setInvMsg]   = useState('');
-  const [invBusy,  setInvBusy]  = useState(false);
+  const [invEmail, setInvEmail]   = useState('');
+  const [invMsg,   setInvMsg]     = useState('');
+  const [invBusy,  setInvBusy]    = useState(false);
+  const [genPass,  setGenPass]    = useState(null); // {email, password} da última criação
 
   const [resetTarget, setResetTarget] = useState(null);
   const [resetPass,   setResetPass]   = useState('');
@@ -22,17 +22,23 @@ export default function AdminPage({ toast }) {
   useEffect(load, []);
 
   const sendInvite = async () => {
-    if (!invEmail || !invPass) return;
-    setInvBusy(true); setInvMsg('');
+    if (!invEmail) return;
+    setInvBusy(true); setInvMsg(''); setGenPass(null);
     try {
-      await createUser({ email: invEmail, password: invPass });
-      setInvMsg(`✅ Usuário ${invEmail} criado! Compartilhe a senha com ele por um canal seguro.`);
-      setInvEmail(''); setInvPass('');
+      const created = await createUser({ email: invEmail });
+      setGenPass({ email: created.email, password: created.password });
+      setInvEmail('');
       load();
     } catch (err) {
       setInvMsg(`❌ Erro: ${err.message}`);
     }
     setInvBusy(false);
+  };
+
+  const copyGenPass = () => {
+    if (!genPass) return;
+    navigator.clipboard?.writeText(genPass.password);
+    toast?.('Senha copiada! ✓', 'success');
   };
 
   const openReset  = (id) => { setResetTarget(id); setResetPass(''); };
@@ -78,21 +84,26 @@ export default function AdminPage({ toast }) {
           <input style={{flex:1,minWidth:200}} type="email" placeholder="email@exemplo.com"
             value={invEmail} onChange={e=>setInvEmail(e.target.value)}
             onKeyDown={e=>e.key==='Enter'&&sendInvite()} />
-          <input style={{flex:1,minWidth:160}} type="text" placeholder="senha inicial (min. 8 caracteres)"
-            value={invPass} onChange={e=>setInvPass(e.target.value)}
-            onKeyDown={e=>e.key==='Enter'&&sendInvite()} />
-          <button className="btn btn-primary" onClick={sendInvite} disabled={invBusy||!invEmail||!invPass}>
+          <button className="btn btn-primary" onClick={sendInvite} disabled={invBusy||!invEmail}>
             {invBusy?'Criando…':'Criar acesso'}
           </button>
         </div>
-        {invMsg&&(
-          <div style={{marginTop:10,fontSize:13,color:invMsg.startsWith('✅')?'var(--green)':'var(--red)'}}>
-            {invMsg}
+        {invMsg&&<div style={{marginTop:10,fontSize:13,color:'var(--red)'}}>{invMsg}</div>}
+        {genPass&&(
+          <div style={{marginTop:12,padding:12,borderRadius:'var(--radius-sm)',
+            background:'var(--green-bg,rgba(0,200,120,.08))',border:'1px solid var(--green-bd,var(--border))'}}>
+            <div style={{fontSize:12,marginBottom:6}}>
+              ✅ Usuário <b>{genPass.email}</b> criado. Senha inicial (compartilhe agora, ela não fica visível depois):
+            </div>
+            <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+              <code className="mono" style={{fontSize:14,fontWeight:700,letterSpacing:1}}>{genPass.password}</code>
+              <button className="btn btn-ghost" style={{fontSize:11}} onClick={copyGenPass}>Copiar</button>
+            </div>
           </div>
         )}
         <div style={{fontSize:12,color:'var(--text3)',marginTop:8}}>
-          Defina uma senha inicial e compartilhe com o convidado por um canal seguro
-          (ex: WhatsApp). Não há envio automático de email neste sistema.
+          A senha inicial é gerada automaticamente. Compartilhe com o convidado por
+          um canal seguro (ex: WhatsApp). Não há envio automático de email neste sistema.
         </div>
       </div>
 
