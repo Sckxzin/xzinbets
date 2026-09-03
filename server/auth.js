@@ -24,6 +24,15 @@ function generatePassword(length = 14) {
   return out;
 }
 
+// Código de recuperação: usado no lugar de um fluxo por email (que este
+// sistema não tem). É mostrado uma única vez (na criação do usuário ou
+// quando o admin reseta a senha dele) e serve pra recuperar acesso sozinho
+// via "Esqueci minha senha" — cada uso gera um código novo.
+function generateRecoveryCode() {
+  const group = () => Array.from({ length: 4 }, () => PASSWORD_ALPHABET[crypto.randomInt(PASSWORD_ALPHABET.length)]).join('');
+  return `${group()}-${group()}-${group()}`;
+}
+
 function comparePassword(password, hash) {
   return bcrypt.compare(password, hash);
 }
@@ -63,7 +72,7 @@ function requireAdmin(req, res, next) {
 }
 
 module.exports = {
-  hashPassword, comparePassword, generatePassword, signToken,
+  hashPassword, comparePassword, generatePassword, generateRecoveryCode, signToken,
   setAuthCookie, clearAuthCookie, requireAuth, requireAdmin,
   COOKIE_NAME,
 };

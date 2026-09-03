@@ -9,11 +9,12 @@ export default function AdminPage({ toast }) {
   const [invEmail, setInvEmail]   = useState('');
   const [invMsg,   setInvMsg]     = useState('');
   const [invBusy,  setInvBusy]    = useState(false);
-  const [genPass,  setGenPass]    = useState(null); // {email, password} da última criação
+  const [genPass,  setGenPass]    = useState(null); // {email, password, recoveryCode} da última criação
 
-  const [resetTarget, setResetTarget] = useState(null);
-  const [resetPass,   setResetPass]   = useState('');
-  const [resetBusy,   setResetBusy]   = useState(false);
+  const [resetTarget,  setResetTarget]  = useState(null);
+  const [resetPass,    setResetPass]    = useState('');
+  const [resetBusy,    setResetBusy]    = useState(false);
+  const [resetResult,  setResetResult]  = useState(null); // {recoveryCode} do último reset
 
   const load = () => {
     setLoading(true);
@@ -26,7 +27,7 @@ export default function AdminPage({ toast }) {
     setInvBusy(true); setInvMsg(''); setGenPass(null);
     try {
       const created = await createUser({ email: invEmail });
-      setGenPass({ email: created.email, password: created.password });
+      setGenPass({ email: created.email, password: created.password, recoveryCode: created.recoveryCode });
       setInvEmail('');
       load();
     } catch (err) {
@@ -41,16 +42,16 @@ export default function AdminPage({ toast }) {
     toast?.('Senha copiada! ✓', 'success');
   };
 
-  const openReset  = (id) => { setResetTarget(id); setResetPass(''); };
-  const cancelReset = () => { setResetTarget(null); setResetPass(''); };
+  const openReset  = (id) => { setResetTarget(id); setResetPass(''); setResetResult(null); };
+  const cancelReset = () => { setResetTarget(null); setResetPass(''); setResetResult(null); };
 
   const confirmReset = async () => {
     if (!resetPass || resetPass.length < 8) return;
     setResetBusy(true);
     try {
-      await resetUserPassword(resetTarget, resetPass);
+      const res = await resetUserPassword(resetTarget, resetPass);
+      setResetResult(res);
       toast?.('Senha redefinida! ✓', 'success');
-      cancelReset();
     } catch (err) {
       toast?.(err.message, 'error');
     }
@@ -93,17 +94,26 @@ export default function AdminPage({ toast }) {
           <div style={{marginTop:12,padding:12,borderRadius:'var(--radius-sm)',
             background:'var(--green-bg,rgba(0,200,120,.08))',border:'1px solid var(--green-bd,var(--border))'}}>
             <div style={{fontSize:12,marginBottom:6}}>
-              ✅ Usuário <b>{genPass.email}</b> criado. Senha inicial (compartilhe agora, ela não fica visível depois):
+              ✅ Usuário <b>{genPass.email}</b> criado. Compartilhe agora — não ficam visíveis depois:
             </div>
-            <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
-              <code className="mono" style={{fontSize:14,fontWeight:700,letterSpacing:1}}>{genPass.password}</code>
-              <button className="btn btn-ghost" style={{fontSize:11}} onClick={copyGenPass}>Copiar</button>
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                <span style={{fontSize:11,color:'var(--text3)',minWidth:110}}>Senha inicial:</span>
+                <code className="mono" style={{fontSize:14,fontWeight:700,letterSpacing:1}}>{genPass.password}</code>
+                <button className="btn btn-ghost" style={{fontSize:11}} onClick={copyGenPass}>Copiar</button>
+              </div>
+              <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                <span style={{fontSize:11,color:'var(--text3)',minWidth:110}}>Código de recuperação:</span>
+                <code className="mono" style={{fontSize:13,fontWeight:700,letterSpacing:1}}>{genPass.recoveryCode}</code>
+              </div>
             </div>
           </div>
         )}
         <div style={{fontSize:12,color:'var(--text3)',marginTop:8}}>
           A senha inicial é gerada automaticamente. Compartilhe com o convidado por
           um canal seguro (ex: WhatsApp). Não há envio automático de email neste sistema.
+          O código de recuperação serve pra ele trocar a própria senha sozinho
+          em "Esqueci minha senha", sem precisar do admin.
         </div>
       </div>
 
@@ -147,15 +157,23 @@ export default function AdminPage({ toast }) {
                     {resetTarget===u.id&&(
                       <tr>
                         <td colSpan={6} style={{background:'var(--bg2)'}}>
-                          <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',padding:'8px 0'}}>
-                            <input type="text" placeholder="nova senha (min. 8 caracteres)" style={{flex:1,minWidth:200}}
-                              value={resetPass} onChange={e=>setResetPass(e.target.value)}
-                              onKeyDown={e=>e.key==='Enter'&&confirmReset()} autoFocus />
-                            <button className="btn btn-primary" style={{fontSize:11}}
-                              onClick={confirmReset} disabled={resetBusy||resetPass.length<8}>
-                              {resetBusy?'Salvando…':'Confirmar'}
-                            </button>
-                          </div>
+                          {!resetResult ? (
+                            <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',padding:'8px 0'}}>
+                              <input type="text" placeholder="nova senha (min. 8 caracteres)" style={{flex:1,minWidth:200}}
+                                value={resetPass} onChange={e=>setResetPass(e.target.value)}
+                                onKeyDown={e=>e.key==='Enter'&&confirmReset()} autoFocus />
+                              <button className="btn btn-primary" style={{fontSize:11}}
+                                onClick={confirmReset} disabled={resetBusy||resetPass.length<8}>
+                                {resetBusy?'Salvando…':'Confirmar'}
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',padding:'8px 0'}}>
+                              <span style={{fontSize:11,color:'var(--text3)'}}>Novo código de recuperação (compartilhe agora):</span>
+                              <code className="mono" style={{fontSize:13,fontWeight:700,letterSpacing:1}}>{resetResult.recoveryCode}</code>
+                              <button className="btn btn-ghost" style={{fontSize:11}} onClick={cancelReset}>Fechar</button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )}

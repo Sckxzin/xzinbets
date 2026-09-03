@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool } = require('../db');
-const { requireAuth, requireAdmin, hashPassword, generatePassword } = require('../auth');
+const { requireAuth, requireAdmin, hashPassword, generatePassword, generateRecoveryCode } = require('../auth');
 const { calcProfit } = require('../stats');
 
 const router = express.Router();
@@ -30,15 +30,17 @@ router.post('/users', async (req, res) => {
   if (!email) return res.status(400).json({ error: 'Informe o email.' });
 
   const password = generatePassword();
-  const password_hash = await hashPassword(password);
+  const recoveryCode = generateRecoveryCode();
+  const [password_hash, recovery_code_hash] = await Promise.all([hashPassword(password), hashPassword(recoveryCode)]);
   try {
     const { rows } = await pool.query(
-      'INSERT INTO users (email, password_hash, is_admin) VALUES ($1, $2, $3) RETURNING id, email, is_admin, created_at',
-      [email, password_hash, !!is_admin]
+      'INSERT INTO users (email, password_hash, recovery_code_hash, is_admin) VALUES ($1, $2, $3, $4) RETURNING id, email, is_admin, created_at',
+      [email, password_hash, recovery_code_hash, !!is_admin]
     );
-    // A senha só existe em texto puro aqui, na resposta desta chamada —
-    // não fica salva em lugar nenhum. O admin precisa copiá-la agora.
-    res.status(201).json({ ...rows[0], password });
+    // Senha e código só existem em texto puro aqui, na resposta desta
+    // chamada — não ficam salvos em lugar nenhum. O admin precisa
+    // copiá-los agora e repassar ao usuário.
+    res.status(201).json({ ...rows[0], password, recoveryCode });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Já existe um usuário com esse email.' });
     throw err;
@@ -49,13 +51,16 @@ router.put('/users/:id/password', async (req, res) => {
   const { password } = req.body || {};
   if (!password || password.length < 8) return res.status(400).json({ error: 'A senha deve ter ao menos 8 caracteres.' });
 
-  const password_hash = await hashPassword(password);
+  const recoveryCode = generateRecoveryCode();
+  const [password_hash, recovery_code_hash] = await Promise.all([hashPassword(password), hashPassword(recoveryCode)]);
   const { rows } = await pool.query(
-    'UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING id, email',
-    [password_hash, req.params.id]
+    'UPDATE users SET password_hash = $1, recovery_code_hash = $2 WHERE id = $3 RETURNING id, email',
+    [password_hash, recovery_code_hash, req.params.id]
   );
   if (!rows[0]) return res.status(404).json({ error: 'Usuário não encontrado.' });
-  res.json({ ok: true });
+  // Aproveita pra (re)emitir um código de recuperação novo pro "Esqueci
+  // minha senha" — repasse os dois junto com a senha nova.
+  res.json({ ok: true, recoveryCode });
 });
 
 module.exports = router;

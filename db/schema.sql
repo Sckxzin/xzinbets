@@ -6,12 +6,16 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS users (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email         TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL,
-  is_admin      BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email              TEXT NOT NULL UNIQUE,
+  password_hash      TEXT NOT NULL,
+  recovery_code_hash TEXT,
+  is_admin           BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Rodando contra um banco já existente (criado antes desta coluna existir),
+-- rode manualmente: ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_code_hash TEXT;
 
 CREATE TABLE IF NOT EXISTS tipsters (
   id         SERIAL PRIMARY KEY,
