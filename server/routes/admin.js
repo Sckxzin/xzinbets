@@ -43,4 +43,17 @@ router.post('/users', async (req, res) => {
   }
 });
 
+router.put('/users/:id/password', async (req, res) => {
+  const { password } = req.body || {};
+  if (!password || password.length < 8) return res.status(400).json({ error: 'A senha deve ter ao menos 8 caracteres.' });
+
+  const password_hash = await hashPassword(password);
+  const { rows } = await pool.query(
+    'UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING id, email',
+    [password_hash, req.params.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Usuário não encontrado.' });
+  res.json({ ok: true });
+});
+
 module.exports = router;

@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { getSettings, saveSettings } from '../utils/api';
+import { getSettings, saveSettings, changePassword } from '../utils/api';
 
 export default function Settings({ toast }) {
   const [bankroll,     setBankroll]     = useState('');
   const [streakAlert,  setStreakAlert]  = useState('3');
   const [goal,         setGoal]         = useState('');
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword,     setNewPassword]     = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwBusy,          setPwBusy]          = useState(false);
 
   useEffect(() => {
     getSettings().then(s => {
@@ -21,6 +26,19 @@ export default function Settings({ toast }) {
       goal:         goal ? parseFloat(goal) : '',
     });
     toast('Configurações salvas! ✓', 'success');
+  };
+
+  const savePassword = async () => {
+    if (newPassword !== confirmPassword) { toast('As senhas novas não coincidem.', 'error'); return; }
+    setPwBusy(true);
+    try {
+      await changePassword(currentPassword, newPassword);
+      toast('Senha alterada! ✓', 'success');
+      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+    setPwBusy(false);
   };
 
   return (
@@ -58,6 +76,32 @@ export default function Settings({ toast }) {
 
         <div>
           <button className="btn btn-primary" onClick={save}>SALVAR CONFIGURAÇÕES</button>
+        </div>
+      </div>
+
+      <div className="card" style={{display:'flex',flexDirection:'column',gap:16}}>
+        <div style={{fontFamily:'var(--font-brand)',fontSize:12,color:'var(--accent)',letterSpacing:2}}>
+          TROCAR SENHA
+        </div>
+
+        <div className="form-group">
+          <span className="form-label">Senha atual</span>
+          <input type="password" value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <span className="form-label">Nova senha</span>
+          <input type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="mínimo 8 caracteres" />
+        </div>
+        <div className="form-group">
+          <span className="form-label">Confirmar nova senha</span>
+          <input type="password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} />
+        </div>
+
+        <div>
+          <button className="btn btn-primary" onClick={savePassword}
+            disabled={pwBusy||!currentPassword||!newPassword||!confirmPassword}>
+            {pwBusy?'SALVANDO...':'TROCAR SENHA'}
+          </button>
         </div>
       </div>
 

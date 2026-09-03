@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { getAdminStats, createUser } from '../utils/api';
+import { getAdminStats, createUser, resetUserPassword } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
-export default function AdminPage() {
+export default function AdminPage({ toast }) {
   const { user } = useAuth();
   const [data,     setData]     = useState(null);
   const [loading,  setLoading]  = useState(true);
@@ -10,6 +10,10 @@ export default function AdminPage() {
   const [invPass,  setInvPass]  = useState('');
   const [invMsg,   setInvMsg]   = useState('');
   const [invBusy,  setInvBusy]  = useState(false);
+
+  const [resetTarget, setResetTarget] = useState(null);
+  const [resetPass,   setResetPass]   = useState('');
+  const [resetBusy,   setResetBusy]   = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -29,6 +33,22 @@ export default function AdminPage() {
       setInvMsg(`❌ Erro: ${err.message}`);
     }
     setInvBusy(false);
+  };
+
+  const openReset  = (id) => { setResetTarget(id); setResetPass(''); };
+  const cancelReset = () => { setResetTarget(null); setResetPass(''); };
+
+  const confirmReset = async () => {
+    if (!resetPass || resetPass.length < 8) return;
+    setResetBusy(true);
+    try {
+      await resetUserPassword(resetTarget, resetPass);
+      toast?.('Senha redefinida! ✓', 'success');
+      cancelReset();
+    } catch (err) {
+      toast?.(err.message, 'error');
+    }
+    setResetBusy(false);
   };
 
   if (loading) return <div style={{padding:40,textAlign:'center',color:'var(--text3)'}}>Carregando…</div>;
@@ -83,29 +103,52 @@ export default function AdminPage() {
           : <table className="tbl">
               <thead><tr>
                 <th>Email</th><th>Apostas</th><th>Acerto</th>
-                <th style={{textAlign:'right'}}>Lucro</th><th>Cadastro</th>
+                <th style={{textAlign:'right'}}>Lucro</th><th>Cadastro</th><th></th>
               </tr></thead>
               <tbody>
                 {data.users.map(u=>(
-                  <tr key={u.id}>
-                    <td style={{fontWeight:500}}>
-                      {u.email}
-                      {u.email===user?.email&&<span className="badge badge-value" style={{marginLeft:6,fontSize:10}}>você</span>}
-                    </td>
-                    <td className="text2">{u.total}</td>
-                    <td className="text2">{u.settled>0?`${u.winRate}%`:'—'}</td>
-                    <td style={{textAlign:'right'}}>
-                      {u.settled>0
-                        ? <span className={`mono fw6 ${u.profit>=0?'positive':'negative'}`}>
-                            {u.profit>=0?'+':'−'}R$ {Math.abs(u.profit).toFixed(2)}
-                          </span>
-                        : <span className="text3">—</span>
-                      }
-                    </td>
-                    <td className="text3" style={{fontSize:12}}>
-                      {u.created_at?new Date(u.created_at).toLocaleDateString('pt-BR'):'—'}
-                    </td>
-                  </tr>
+                  <React.Fragment key={u.id}>
+                    <tr>
+                      <td style={{fontWeight:500}}>
+                        {u.email}
+                        {u.email===user?.email&&<span className="badge badge-value" style={{marginLeft:6,fontSize:10}}>você</span>}
+                      </td>
+                      <td className="text2">{u.total}</td>
+                      <td className="text2">{u.settled>0?`${u.winRate}%`:'—'}</td>
+                      <td style={{textAlign:'right'}}>
+                        {u.settled>0
+                          ? <span className={`mono fw6 ${u.profit>=0?'positive':'negative'}`}>
+                              {u.profit>=0?'+':'−'}R$ {Math.abs(u.profit).toFixed(2)}
+                            </span>
+                          : <span className="text3">—</span>
+                        }
+                      </td>
+                      <td className="text3" style={{fontSize:12}}>
+                        {u.created_at?new Date(u.created_at).toLocaleDateString('pt-BR'):'—'}
+                      </td>
+                      <td style={{textAlign:'right'}}>
+                        <button className="btn btn-ghost" style={{fontSize:11}}
+                          onClick={()=>resetTarget===u.id?cancelReset():openReset(u.id)}>
+                          {resetTarget===u.id?'Cancelar':'Resetar senha'}
+                        </button>
+                      </td>
+                    </tr>
+                    {resetTarget===u.id&&(
+                      <tr>
+                        <td colSpan={6} style={{background:'var(--bg2)'}}>
+                          <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',padding:'8px 0'}}>
+                            <input type="text" placeholder="nova senha (min. 8 caracteres)" style={{flex:1,minWidth:200}}
+                              value={resetPass} onChange={e=>setResetPass(e.target.value)}
+                              onKeyDown={e=>e.key==='Enter'&&confirmReset()} autoFocus />
+                            <button className="btn btn-primary" style={{fontSize:11}}
+                              onClick={confirmReset} disabled={resetBusy||resetPass.length<8}>
+                              {resetBusy?'Salvando…':'Confirmar'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

@@ -117,7 +117,7 @@ function AppInner() {
           {page==='analysis'  && <Analysis  refreshKey={refreshKey} />}
           {page==='tipsters'  && <Tipsters  refreshKey={refreshKey} onTipstersChange={setTipsters} toast={toast} />}
           {page==='settings'  && <Settings  toast={toast} />}
-          {page==='admin' && isAdmin  && <AdminPage />}
+          {page==='admin' && isAdmin  && <AdminPage toast={toast} />}
           {page==='admin' && !isAdmin && <div style={{ padding:40, color:'var(--red)', fontSize:13 }}>Acesso negado.</div>}
         </div>
 

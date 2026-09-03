@@ -19,6 +19,7 @@ const del    = (path)        => request(path, { method: 'DELETE' });
 export const signIn     = (email, password) => post('/auth/login', { email, password });
 export const signOut    = () => post('/auth/logout');
 export const getMe      = () => get('/auth/me');
+export const changePassword = (currentPassword, newPassword) => put('/auth/password', { currentPassword, newPassword });
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
 export const getSettings  = () => get('/settings');
@@ -46,3 +47,4 @@ export const getStats  = ()        => get('/bets/stats');
 // ─── Admin ────────────────────────────────────────────────────────────────────
 export const getAdminStats = () => get('/admin/stats');
 export const createUser    = (obj) => post('/admin/users', obj);
+export const resetUserPassword = (id, password) => put(`/admin/users/${id}/password`, { password });
