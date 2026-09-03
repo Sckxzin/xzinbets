@@ -15,11 +15,19 @@ const post   = (path, data)  => request(path, { method: 'POST',   body: JSON.str
 const put    = (path, data)  => request(path, { method: 'PUT',    body: JSON.stringify(data) });
 const del    = (path)        => request(path, { method: 'DELETE' });
 
+function withQuery(path, filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== '') params.set(k, v); });
+  const qs = params.toString();
+  return `${path}${qs ? `?${qs}` : ''}`;
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 export const signIn     = (email, password) => post('/auth/login', { email, password });
 export const signOut    = () => post('/auth/logout');
 export const getMe      = () => get('/auth/me');
 export const changePassword = (currentPassword, newPassword) => put('/auth/password', { currentPassword, newPassword });
+export const forgotPassword = (email, recoveryCode, newPassword) => post('/auth/forgot-password', { email, recoveryCode, newPassword });
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
 export const getSettings  = () => get('/settings');
@@ -33,16 +41,11 @@ export const updateTipster    = (id, obj) => put(`/tipsters/${id}`, obj);
 export const deleteTipster    = (id) => del(`/tipsters/${id}`);
 
 // ─── Bets ─────────────────────────────────────────────────────────────────────
-export function getBets(filters = {}) {
-  const params = new URLSearchParams();
-  Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== '') params.set(k, v); });
-  const qs = params.toString();
-  return get(`/bets${qs ? `?${qs}` : ''}`);
-}
+export const getBets   = (filters = {}) => get(withQuery('/bets', filters));
 export const createBet = (obj)     => post('/bets', obj);
 export const updateBet = (id, obj) => put(`/bets/${id}`, obj);
 export const deleteBet = (id)      => del(`/bets/${id}`);
-export const getStats  = ()        => get('/bets/stats');
+export const getStats  = (filters = {}) => get(withQuery('/bets/stats', filters));
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
 export const getAdminStats = () => get('/admin/stats');

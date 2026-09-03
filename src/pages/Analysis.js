@@ -8,7 +8,9 @@ import { SPORT_MAP } from '../utils/constants';
 
 export default function Analysis({ refreshKey }) {
   const [stats, setStats] = useState(null);
-  useEffect(()=>{ getStats().then(setStats).catch(console.error); }, [refreshKey]);
+  const [from,  setFrom]  = useState('');
+  const [to,    setTo]    = useState('');
+  useEffect(()=>{ getStats({from,to}).then(setStats).catch(console.error); }, [refreshKey,from,to]);
   if (!stats) return <div style={{padding:40,textAlign:'center',color:'var(--text3)'}}>Carregando…</div>;
 
   const sportRows = Object.entries(stats.sportStats||{}).map(([name,s])=>({
@@ -41,6 +43,14 @@ export default function Analysis({ refreshKey }) {
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:18}}>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+        <span style={{fontSize:12,color:'var(--text3)'}}>Período:</span>
+        <input type="date" style={{maxWidth:150}} value={from} onChange={e=>setFrom(e.target.value)} title="De" />
+        <input type="date" style={{maxWidth:150}} value={to} onChange={e=>setTo(e.target.value)} title="Até" />
+        {(from||to) && <button className="btn btn-ghost" style={{fontSize:11}} onClick={()=>{setFrom('');setTo('');}}>Ver tudo</button>}
+        {(from||to) && <span style={{fontSize:11,color:'var(--text3)'}}>Estatísticas calculadas só com as apostas do período.</span>}
+      </div>
+
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:10}}>
         <div className="metric-card">
           <div className="metric-label">Média mensal</div>

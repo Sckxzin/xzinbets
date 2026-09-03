@@ -25,13 +25,15 @@ async function hydrateBets(bets, userId) {
 }
 
 router.get('/', async (req, res) => {
-  const { result, sport, type, tipster_id } = req.query;
+  const { result, sport, type, tipster_id, from, to } = req.query;
   const clauses = ['user_id = $1'];
   const params = [req.user.id];
   if (result && result !== 'all')     { params.push(result);     clauses.push(`result = $${params.length}`); }
   if (sport  && sport  !== 'all')     { params.push(sport);      clauses.push(`sport = $${params.length}`); }
   if (type   && type   !== 'all')     { params.push(type);       clauses.push(`type = $${params.length}`); }
   if (tipster_id)                     { params.push(tipster_id); clauses.push(`tipster_id = $${params.length}`); }
+  if (from)                           { params.push(from);       clauses.push(`date >= $${params.length}`); }
+  if (to)                             { params.push(to);         clauses.push(`date <= $${params.length}`); }
 
   const { rows } = await pool.query(
     `SELECT * FROM bets WHERE ${clauses.join(' AND ')} ORDER BY date DESC, id DESC`,
@@ -41,7 +43,16 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/stats', async (req, res) => {
-  const { rows: bets } = await pool.query('SELECT * FROM bets WHERE user_id = $1 ORDER BY date ASC, id ASC', [req.user.id]);
+  const { from, to } = req.query;
+  const clauses = ['user_id = $1'];
+  const params = [req.user.id];
+  if (from) { params.push(from); clauses.push(`date >= $${params.length}`); }
+  if (to)   { params.push(to);   clauses.push(`date <= $${params.length}`); }
+
+  const { rows: bets } = await pool.query(
+    `SELECT * FROM bets WHERE ${clauses.join(' AND ')} ORDER BY date ASC, id ASC`,
+    params
+  );
   const { rows: settingsRows } = await pool.query('SELECT key, value FROM settings WHERE user_id = $1', [req.user.id]);
   const settings = {};
   settingsRows.forEach(r => { settings[r.key] = r.value; });

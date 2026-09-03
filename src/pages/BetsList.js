@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { getBets, deleteBet, updateBet } from '../utils/api';
 import BetRow from '../components/BetRow';
 import { SPORTS } from '../utils/constants';
+import { exportBetsCSV } from '../utils/csv';
 
 const STATUS_FILTERS = [
   {id:'all',label:'Todas'},{id:'pending',label:'⏳ Pendentes'},
@@ -18,6 +19,8 @@ export default function BetsList({ refreshKey, tipsters=[], onEdit, onRefresh, t
   const [type,   setType]   = useState('all');
   const [tipster,setTipster]= useState('all');
   const [search, setSearch] = useState('');
+  const [from,   setFrom]   = useState('');
+  const [to,     setTo]     = useState('');
   const [loading,setLoading]= useState(true);
 
   const load = useCallback(() => {
@@ -27,8 +30,10 @@ export default function BetsList({ refreshKey, tipsters=[], onEdit, onRefresh, t
     if (sport !=='all') params.sport=sport;
     if (type  !=='all') params.type=type;
     if (tipster!=='all') params.tipster_id=tipster;
+    if (from) params.from=from;
+    if (to)   params.to=to;
     getBets(params).then(d=>{setBets(d);setLoading(false);}).catch(e=>{console.error(e);setLoading(false);});
-  }, [status,sport,type,tipster]);
+  }, [status,sport,type,tipster,from,to]);
 
   useEffect(()=>{ load(); }, [load,refreshKey]);
 
@@ -67,6 +72,9 @@ export default function BetsList({ refreshKey, tipsters=[], onEdit, onRefresh, t
         <select style={{maxWidth:140}} value={type} onChange={e=>setType(e.target.value)}>
           {TYPE_FILTERS.map(f=><option key={f.id} value={f.id}>{f.label}</option>)}
         </select>
+        <input type="date" style={{maxWidth:150}} value={from} onChange={e=>setFrom(e.target.value)} title="De" />
+        <input type="date" style={{maxWidth:150}} value={to} onChange={e=>setTo(e.target.value)} title="Até" />
+        {(from||to) && <button className="btn btn-ghost" style={{fontSize:11}} onClick={()=>{setFrom('');setTo('');}}>Limpar período</button>}
       </div>
 
       {/* Status chips */}
@@ -80,6 +88,10 @@ export default function BetsList({ refreshKey, tipsters=[], onEdit, onRefresh, t
             {totalProfit>=0?'+':'−'}R$ {Math.abs(totalProfit).toFixed(2)}
           </span>}
         </span>
+        <button className="btn btn-ghost" style={{fontSize:11}} disabled={filtered.length===0}
+          onClick={()=>exportBetsCSV(filtered)}>
+          ⬇ Exportar CSV
+        </button>
       </div>
 
       {/* List */}
